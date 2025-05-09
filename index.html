@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>RaceBox GPS Realtime</title>
+  <style>
+    body {
+      background-color: #111;
+      color: white;
+      text-align: center;
+      font-family: Arial, sans-serif;
+      padding-top: 50px;
+    }
+
+    .container {
+      background: #222;
+      padding: 30px;
+      border-radius: 12px;
+      width: 300px;
+      margin: auto;
+      box-shadow: 0 0 15px rgba(0, 150, 255, 0.2);
+    }
+
+    h1 {
+      color: #03a9f4;
+    }
+
+    .speed {
+      font-size: 48px;
+      font-weight: bold;
+      margin: 20px 0;
+    }
+
+    button {
+      padding: 10px 20px;
+      background: #03a9f4;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #0288d1;
+    }
+
+    .note {
+      font-size: 14px;
+      color: #aaa;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>RaceBox GPS</h1>
+    <div class="speed" id="speed">0.00 km/h</div>
+    <button onclick="startTracking()">Mulai Tracking</button>
+    <div class="note">Pastikan GPS aktif & izinkan lokasi</div>
+  </div>
+
+  <script>
+    let watchId;
+
+    function startTracking() {
+      if (navigator.geolocation) {
+        watchId = navigator.geolocation.watchPosition(updateSpeed, handleError, {
+          enableHighAccuracy: true,
+          maximumAge: 1000
+        });
+      } else {
+        alert("Browser tidak mendukung GPS");
+      }
+    }
+
+    function updateSpeed(position) {
+      let speed = position.coords.speed; // dalam m/s
+
+      if (speed === null) {
+        document.getElementById("speed").innerText = "Menghitung...";
+      } else {
+        let speedKmh = speed * 3.6; // m/s ke km/h
+        document.getElementById("speed").innerText = speedKmh.toFixed(2) + " km/h";
+      }
+    }
+
+    function handleError(error) {
+      console.error(error);
+      alert("Gagal mendapatkan data GPS: " + error.message);
+    }
+  </script>
+</body>
+</html>
