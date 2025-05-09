@@ -1,43 +1,38 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
   <meta charset="UTF-8">
-  <title>RaceBox GPS Realtime</title>
+  <title>RaceBox GPS + Jarak</title>
   <style>
     body {
-      background-color: #111;
-      color: white;
+      background: #121212;
+      color: #fff;
+      font-family: sans-serif;
       text-align: center;
-      font-family: Arial, sans-serif;
-      padding-top: 50px;
+      padding-top: 40px;
     }
 
     .container {
-      background: #222;
-      padding: 30px;
-      border-radius: 12px;
-      width: 300px;
+      background: #1e1e1e;
       margin: auto;
-      box-shadow: 0 0 15px rgba(0, 150, 255, 0.2);
+      padding: 25px;
+      border-radius: 10px;
+      width: 320px;
+      box-shadow: 0 0 20px rgba(0, 150, 255, 0.2);
     }
 
-    h1 {
-      color: #03a9f4;
-    }
-
-    .speed {
-      font-size: 48px;
-      font-weight: bold;
-      margin: 20px 0;
+    input, button {
+      padding: 10px;
+      width: 90%;
+      font-size: 16px;
+      margin: 10px 0;
+      border-radius: 6px;
+      border: none;
     }
 
     button {
-      padding: 10px 20px;
       background: #03a9f4;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 16px;
+      color: #fff;
       cursor: pointer;
     }
 
@@ -45,49 +40,103 @@
       background: #0288d1;
     }
 
-    .note {
-      font-size: 14px;
-      color: #aaa;
-      margin-top: 10px;
+    .info {
+      margin-top: 20px;
+      font-size: 18px;
+    }
+
+    .info span {
+      display: block;
+      margin: 5px 0;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>RaceBox GPS</h1>
-    <div class="speed" id="speed">0.00 km/h</div>
-    <button onclick="startTracking()">Mulai Tracking</button>
-    <div class="note">Pastikan GPS aktif & izinkan lokasi</div>
+    <h2>RaceBox GPS</h2>
+    <input type="number" id="targetDistance" placeholder="Masukkan jarak (meter)">
+    <button onclick="startRace()">Mulai</button>
+
+    <div class="info">
+      <span id="speed">Kecepatan: 0 km/h</span>
+      <span id="distance">Jarak: 0 m</span>
+      <span id="time">Waktu: 0 dtk</span>
+    </div>
   </div>
 
   <script>
     let watchId;
+    let startCoords = null;
+    let totalDistance = 0;
+    let startTime;
+    let lastCoords = null;
+    let timer;
 
-    function startTracking() {
+    function toRad(deg) {
+      return deg * Math.PI / 180;
+    }
+
+    function calcDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371000; // radius bumi dalam meter
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lon2 - lon1);
+      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    }
+
+    function startRace() {
+      const target = parseFloat(document.getElementById("targetDistance").value);
+      if (!target || target <= 0) {
+        alert("Masukkan jarak yang valid");
+        return;
+      }
+
+      totalDistance = 0;
+      startCoords = null;
+      lastCoords = null;
+      startTime = Date.now();
+      document.getElementById("speed").innerText = "Kecepatan: 0 km/h";
+      document.getElementById("distance").innerText = "Jarak: 0 m";
+      document.getElementById("time").innerText = "Waktu: 0 dtk";
+
       if (navigator.geolocation) {
-        watchId = navigator.geolocation.watchPosition(updateSpeed, handleError, {
+        watchId = navigator.geolocation.watchPosition(position => {
+          const coords = position.coords;
+          const currentSpeed = coords.speed ? (coords.speed * 3.6).toFixed(2) : "0.00";
+
+          document.getElementById("speed").innerText = `Kecepatan: ${currentSpeed} km/h`;
+
+          if (!startCoords) {
+            startCoords = coords;
+            lastCoords = coords;
+            return;
+          }
+
+          const dist = calcDistance(lastCoords.latitude, lastCoords.longitude, coords.latitude, coords.longitude);
+          totalDistance += dist;
+          lastCoords = coords;
+
+          document.getElementById("distance").innerText = `Jarak: ${Math.floor(totalDistance)} m`;
+
+          const elapsed = Math.floor((Date.now() - startTime) / 1000);
+          document.getElementById("time").innerText = `Waktu: ${elapsed} dtk`;
+
+          if (totalDistance >= target) {
+            navigator.geolocation.clearWatch(watchId);
+            alert(`Selesai! Jarak ${Math.floor(totalDistance)} meter ditempuh dalam ${elapsed} detik`);
+          }
+        }, error => {
+          alert("Gagal mendapatkan lokasi: " + error.message);
+        }, {
           enableHighAccuracy: true,
           maximumAge: 1000
         });
       } else {
-        alert("Browser tidak mendukung GPS");
+        alert("GPS tidak didukung di browser ini");
       }
-    }
-
-    function updateSpeed(position) {
-      let speed = position.coords.speed; // dalam m/s
-
-      if (speed === null) {
-        document.getElementById("speed").innerText = "Menghitung...";
-      } else {
-        let speedKmh = speed * 3.6; // m/s ke km/h
-        document.getElementById("speed").innerText = speedKmh.toFixed(2) + " km/h";
-      }
-    }
-
-    function handleError(error) {
-      console.error(error);
-      alert("Gagal mendapatkan data GPS: " + error.message);
     }
   </script>
 </body>
